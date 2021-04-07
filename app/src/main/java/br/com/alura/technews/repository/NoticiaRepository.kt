@@ -1,5 +1,7 @@
 package br.com.alura.technews.repository
 
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import br.com.alura.technews.asynctask.BaseAsyncTask
 import br.com.alura.technews.database.dao.NoticiaDAO
 import br.com.alura.technews.model.Noticia
@@ -9,21 +11,35 @@ class NoticiaRepository(
     private val dao: NoticiaDAO,
     private val webclient: NoticiaWebClient = NoticiaWebClient()
 ) {
+    private val liveData = MutableLiveData<Resource<List<Noticia>?>>()
 
-    fun buscaTodos(
-        quandoSucesso: (List<Noticia>) -> Unit,
-        quandoFalha: (erro: String?) -> Unit
-    ) {
-        buscaInterno(quandoSucesso)
-        buscaNaApi(quandoSucesso, quandoFalha)
+    fun buscaTodos() : LiveData<Resource<List<Noticia>?>> {
+        buscaInterno(quandoSucesso = {listaInterna ->
+            liveData.value = Resource(dado = listaInterna)
+        })
+
+        buscaNaApi(quandoSucesso = {listaApi ->
+            liveData.value = Resource(dado = listaApi)
+        },
+            quandoFalha = {erro ->
+            val resourceAtual = liveData.value
+            val resourceCriado = criaResourceDeFalha<List<Noticia>?>(resourceAtual, erro)
+
+            liveData.value = resourceCriado
+        })
+        return liveData
     }
 
-    fun salva(
-        noticia: Noticia,
-        quandoSucesso: (noticiaNova: Noticia) -> Unit,
-        quandoFalha: (erro: String?) -> Unit
-    ) {
-        salvaNaApi(noticia, quandoSucesso, quandoFalha)
+
+
+    fun salva(noticia: Noticia): LiveData<Resource<Void?>> {
+        val liveData = MutableLiveData<Resource<Void?>>()
+        salvaNaApi(noticia, quandoSucesso = {
+            liveData.value = Resource(null)
+        }, quandoFalha = {erro ->
+            liveData.value = Resource(null, erro)
+        })
+        return liveData
     }
 
     fun remove(
