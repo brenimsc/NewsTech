@@ -24,11 +24,9 @@ class FormularioNoticiaActivity : AppCompatActivity() {
     private val noticiaId: Long by lazy {
         intent.getLongExtra(NOTICIA_ID_CHAVE, 0)
     }
-    private val repository by lazy {
-        NoticiaRepository(AppDatabase.getInstance(this).noticiaDAO)
-    }
 
     private val viewModel by lazy {
+        val repository = NoticiaRepository(AppDatabase.getInstance(this).noticiaDAO)
         val factory = FormularioNoticiaViewModelFactory(repository)
         val provedor = ViewModelProviders.of(this, factory)
         provedor.get(FormularioNoticiaViewModel::class.java)
@@ -50,10 +48,10 @@ class FormularioNoticiaActivity : AppCompatActivity() {
     }
 
     private fun preencheFormulario() {
-        repository.buscaPorId(noticiaId, quandoSucesso = { noticiaEncontrada ->
-            if (noticiaEncontrada != null) {
-                activity_formulario_noticia_titulo.setText(noticiaEncontrada.titulo)
-                activity_formulario_noticia_texto.setText(noticiaEncontrada.texto)
+        viewModel.buscaPorId(noticiaId).observe(this, Observer { noticiaEncontada ->
+            if (noticiaEncontada != null){
+                activity_formulario_noticia_titulo.setText(noticiaEncontada.titulo)
+                activity_formulario_noticia_texto.setText(noticiaEncontada.texto)
             }
         })
     }
@@ -75,21 +73,7 @@ class FormularioNoticiaActivity : AppCompatActivity() {
     }
 
     private fun salva(noticia: Noticia) {
-        val falha = { _: String? ->
-            mostraErro(MENSAGEM_ERRO_SALVAR)
-        }
-        val sucesso = { _: Noticia ->
-            finish()
-        }
-
-        if (noticia.id > 0) {
-            repository.edita(
-                noticia,
-                quandoSucesso = sucesso,
-                quandoFalha = falha
-            )
-        } else {
-            viewModel.salva(noticia).observe(this, Observer{
+        viewModel.salva(noticia).observe(this, Observer{
                 if (it.erro==null){
                     finish()
                 } else {
@@ -97,7 +81,6 @@ class FormularioNoticiaActivity : AppCompatActivity() {
                 }
             })
         }
-    }
 
 
 }
